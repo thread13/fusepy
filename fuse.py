@@ -611,8 +611,16 @@ def fuse_exit():
 
 
 class FuseOSError(OSError):
-    def __init__(self, errno):
-        super(FuseOSError, self).__init__(errno, os.strerror(errno))
+    def __init__(self, errno, prefix=None, log=True, log_exc=True):
+
+        if prefix:
+            message = "%s %s" % ( prefix, os.strerror(errno))
+            super(FuseOSError, self).__init__(errno, message)
+        else:
+            super(FuseOSError, self).__init__(errno, os.strerror(errno))
+        # ---
+        self.log = log
+        self.log_exc = log_exc
 
 
 class FUSE(object):
@@ -732,6 +740,27 @@ class FUSE(object):
             else:
                 try:
                     return func(*args, **kwargs) or 0
+
+                except FuseOSError as e:
+                    err = e.errno
+                    if err > 0:
+                        _log = log.debug
+                        ret = -err
+                    else:
+                        _log = log.error
+                        ret = -errno.EINVAL
+
+                    if e.log:
+                        _log("FUSE operation %s raised a %s with %serrno %s, returning %s."
+                            , func.__name__
+                            , type(e)
+                            , "negative" if err <= 0 else ''
+                            , err
+                            , ret
+                            , exc_info = e.log_exc
+                            )
+
+                    return ret
 
                 except OSError as e:
                     if e.errno > 0:
