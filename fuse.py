@@ -1277,6 +1277,8 @@ class LoggingMixIn:
         self.log.debug('-> %s %s %s', op, path, repr(args))
         ret = '[Unhandled Exception]'
         try:
+            if not hasattr(self, op):
+                raise FuseOSError(errno.EFAULT)
             ret = getattr(self, op)(path, *args)
             return ret
         except OSError as e:
