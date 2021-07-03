@@ -727,6 +727,8 @@ class FUSE(object):
             if isinstance(value, bool):
                 if value is True:
                     yield key
+            elif value is None:
+                continue
             else:
                 yield '%s=%s' % (key, value)
 
@@ -1292,3 +1294,4 @@ class LoggingMixIn:
             raise
         finally:
             self.log.debug('<- %s %s', op, repr(ret))
+
