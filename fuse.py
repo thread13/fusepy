@@ -611,13 +611,16 @@ def fuse_exit():
 
 
 class FuseOSError(OSError):
-    def __init__(self, errno, prefix=None, log=True, log_exc=True):
+    def __init__(self, errno, prefix=None, filename=None, log=True, log_exc=True):
 
         if prefix:
             message = "%s %s" % ( prefix, os.strerror(errno))
-            super(FuseOSError, self).__init__(errno, message)
         else:
-            super(FuseOSError, self).__init__(errno, os.strerror(errno))
+            message = os.strerror(errno)
+
+        # [ https://docs.python.org/3/library/exceptions.html#OSError ]
+        super(FuseOSError, self).__init__(errno, message, filename)
+
         # ---
         self.log = log
         self.log_exc = log_exc
@@ -751,12 +754,14 @@ class FUSE(object):
                         ret = -errno.EINVAL
 
                     if e.log:
-                        _log("FUSE operation %s raised a %s with %serrno %s, returning %s."
+                        _log("FUSE operation %r raised a %s with %serrno %s, returning %s: %s (%s)"
                             , func.__name__
                             , type(e)
                             , "negative" if err <= 0 else ''
                             , err
                             , ret
+                            , e.strerror 
+                            , e.filename
                             , exc_info = e.log_exc
                             )
 
@@ -1269,6 +1274,7 @@ class Operations(object):
     def write(self, path, data, offset, fh):
         raise FuseOSError(errno.EROFS)
 
+# ---------------------------------------------------------------------
 
 class LoggingMixIn:
     log = logging.getLogger('fuse.log-mixin')
